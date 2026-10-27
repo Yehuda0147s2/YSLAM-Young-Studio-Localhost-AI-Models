@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Auto Coding Playground & Metrics Interface</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            playground: {
+              bg: '#08090d',
+              surface: '#0f1117',
+              card: '#161922',
+              border: '#232736',
+              hover: '#1d2230',
+              accent: '#00f2ff',
+              purple: '#a855f7',
+              emerald: '#10b981',
+              rose: '#f43f5e',
+              amber: '#f59e0b'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'Menlo', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Fonts & FontAwesome Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    /* Custom Glow & Chart Effects */
+    .glow-cyan { box-shadow: 0 0 25px rgba(0, 242, 255, 0.2); }
+    .glow-purple { box-shadow: 0 0 25px rgba(168, 85, 247, 0.2); }
+    .glow-emerald { box-shadow: 0 0 25px rgba(16, 185, 129, 0.2); }
+    .border-glow-accent { border-color: rgba(0, 242, 255, 0.4); }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #08090d; }
+    ::-webkit-scrollbar-thumb { background: #232736; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #00f2ff66; }
+
+    /* Metric Gauge Wave Animation */
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.8; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.03); }
+    }
+    .pulse-glow { animation: pulseGlow 3s infinite ease-in-out; }
+
+    textarea { tab-size: 2; }
+  </style>
+</head>
+<body class="h-full bg-playground-bg text-zinc-100 font-sans antialiased overflow-hidden flex flex-col select-none">
+
+  <!-- ==================== PLAYGROUND TOP METRICS HEADER ==================== -->
+  <header class="h-14 bg-playground-surface/90 border-b border-playground-border px-4 flex items-center justify-between shrink-0 z-30 gap-3">
+    <!-- Left Logo & Session Identity -->
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 via-purple-600 to-emerald-400 p-0.5 shadow-lg glow-cyan flex items-center justify-center">
+        <div class="w-full h-full bg-playground-bg rounded-[10px] flex items-center justify-center text-playground-accent font-black text-base">
+          <i class="fa-solid fa-code-branch"></i>
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-extrabold text-sm tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-purple-400 to-emerald-400">AUTO-CODE SPACE</span>
+          <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-mono">v3.8 ULTRA</span>
+        </div>
+        <p class="text-[10px] text-zinc-400 hidden sm:block font-mono">Autonomous Execution Engine & Agent Telemetry</p>
+      </div>
+
+      <!-- SMART NAV / ACTION MENU DROPDOWNS -->
+      <nav class="hidden md:flex items-center gap-1 ml-4 border-l border-playground-border pl-4 text-xs font-mono relative">
+        
+        <!-- Smart Menu: File -->
+        <div class="relative group">
+          <button class="px-2.5 py-1 rounded-lg hover:bg-playground-hover text-zinc-300 hover:text-white flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-folder text-amber-400 text-[11px]"></i> File <i class="fa-solid fa-chevron-down text-[9px] text-zinc-500"></i>
+          </button>
+          <div class="absolute left-0 top-full mt-1 w-48 bg-playground-surface border border-playground-border rounded-xl shadow-2xl py-1 hidden group-hover:block z-50">
+            <button onclick="createNewFile()" class="w-full text-left px-3 py-1.5 hover:bg-playground-hover text-zinc-300 hover:text-white flex items-center justify-between">
+              <span><i class="fa-solid fa-plus text-xs mr-2 text-cyan-400"></i>New Canvas File</span>
+              <kbd class="text-[9px] text-zinc-500">Ctrl+N</kbd>
+            </button>
+            <button onclick="saveSnapshot()" class="w-full text-left px-3 py-1.5 hover:bg-playground-hover text-zinc-300 hover:text-white flex items-center justify-between">
+              <span><i class="fa-solid fa-floppy-disk text-xs mr-2 text-emerald-400"></i>Save Snapshot</span>
+              <kbd class="text-[9px] text-zinc-500">Ctrl+S</kbd>
+            </button>
+            <div class="h-px bg-playground-border my-1"></div>
+            <button onclick="exportWorkspace()" class="w-full text-left px-3 py-1.5 hover:bg-playground-hover text-zinc-300 hover:text-white flex items-center justify-between">
+              <span><i class="fa-solid fa-download text-xs mr-2 text-purple-400"></i>Export Zip</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Smart Menu: AI Assistant Tools -->
+        <div class="relative group">
+          <button class="px-2.5 py-1 rounded-lg hover:bg-playground-hover text-zinc-300 hover:text-white flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-wand-magic-sparkles text-playground-accent text-[11px]"></i> Smart Actions <i class="fa-solid fa-chevron-down text-[9px] text-zinc-500"></i>
+          </button>
+          <div class="absolute left-0 top-full mt-1 w-56 bg-playground-surface border border-playground-border rounded-xl shadow-2xl py-1 hidden group-hover:block z-50">
+            <button onclick="runSmartAction('refactor')" class="w-full text-left px-3 py-1.5 hover:bg-playground-hover text-zinc-300 hover:text-white flex items-center justify-between">
+              <span><i class="fa-solid fa-code text-xs mr-2 text-playground-accent"></i>Auto-Refactor Code</span>
+            </button>
+            <button onclick="runSmartAction('tests')" class="w-full text-left px-3 py-1.5 hover:bg-playground-hover text-zinc-300 hover:text-white flex items-center justify-between">
+              <span><i class="fa-solid fa-vial text-xs mr-2 text-emerald-400"></i>Generate Unit Tests</span>
+            </button>
+            <button onclick="runSmartAction('security')" class="w-full text-left px-3 py-1.5 hover:bg-playground-hover text-zinc-300 hover:text-white flex items-center justify-between">
+              <span><i class="fa-solid fa-shield-virus text-xs mr-2 text-rose-400"></i>Security & Vulnerability Audit</span>
+            </button>
+            <button onclick="runSmartAction('docs')" class="w-full text-left px-3 py-1.5 hover:bg-playground-hover text-zinc-300 hover:text-white flex items-center justify-between">
+              <span><i class="fa-solid fa-file-lines text-xs mr-2 text-amber-400"></i>Auto-Docstrings & Comments</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Smart Menu: Localhost AI Connections -->
+        <div class="relative group">
+          <button onclick="openLocalhostSettingsModal()" class="px-2.5 py-1 rounded-lg hover:bg-playground-hover text-zinc-300 hover:text-white flex items-center gap-1.5 transition border border-cyan-500/30 bg-cyan-500/10">
+            <i class="fa-solid fa-server text-cyan-400 text-[11px]"></i> 
+            <span>Local AI</span> 
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          </button>
+        </div>
+
+      </nav>
+    </div>
+
+    <!-- Center Live Metric Counters Bar -->
+    <div class="hidden lg:flex items-center gap-4 px-4 py-1.5 bg-playground-card border border-playground-border rounded-xl text-xs font-mono">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+        <span class="text-zinc-400">Agent Status:</span>
+        <span id="agent-status-tag" class="text-emerald-400 font-bold">AUTONOMOUS IDLE</span>
+      </div>
+      <div class="h-3 w-px bg-playground-border"></div>
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-bolt text-amber-400 text-[11px]"></i>
+        <span class="text-zinc-400">Tokens/Sec:</span>
+        <span id="metric-tps" class="text-zinc-100 font-bold">142.8</span>
+      </div>
+      <div class="h-3 w-px bg-playground-border"></div>
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-brain text-purple-400 text-[11px]"></i>
+        <span class="text-zinc-400">Context Window:</span>
+        <span id="metric-context" class="text-zinc-100 font-bold">18.4k / 128k</span>
+      </div>
+      <div class="h-3 w-px bg-playground-border"></div>
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-shield-halved text-cyan-400 text-[11px]"></i>
+        <span class="text-zinc-400">Accuracy:</span>
+        <span id="metric-accuracy" class="text-emerald-400 font-bold">99.4%</span>
+      </div>
+    </div>
+
+    <!-- Right Controls & Trigger Actions -->
+    <div class="flex items-center gap-2">
+      <!-- GUI Mode Toggle Button -->
+      <div class="flex bg-playground-card border border-playground-border rounded-lg p-0.5 text-xs font-mono">
+        <button id="gui-mode-desktop" onclick="setGuiMode('desktop')" class="px-2.5 py-1 rounded-md bg-playground-accent/20 text-playground-accent font-semibold flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-desktop"></i>
+          <span class="hidden sm:inline">Desktop</span>
+        </button>
+        <button id="gui-mode-mobile" onclick="setGuiMode('mobile')" class="px-2.5 py-1 rounded-md text-zinc-400 hover:text-white flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-mobile-screen-button"></i>
+          <span class="hidden sm:inline">Mobile</span>
+        </button>
+      </div>
+
+      <button id="btn-toggle-metrics" onclick="toggleMetricsOverlay()" class="px-3 py-1.5 rounded-lg bg-playground-card hover:bg-playground-hover border border-playground-border text-xs text-zinc-300 flex items-center gap-1.5 transition">
+        <i class="fa-solid fa-chart-line text-playground-accent"></i>
+        <span class="hidden md:inline">Metrics Board</span>
+      </button>
+
+      <button id="btn-auto-solve" onclick="runAutoCodingLoop()" class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 text-zinc-950 font-bold text-xs flex items-center gap-2 shadow-lg glow-cyan hover:opacity-95 transition active:scale-95">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <span>Auto-Generate</span>
+        <kbd class="hidden sm:inline-block text-[9px] bg-zinc-950/20 px-1 py-0.5 rounded text-zinc-950 font-mono">Ctrl+Space</kbd>
+      </button>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN WORKSPACE BODY ==================== -->
+  <div class="flex-1 flex overflow-hidden relative">
+
+    <!-- 1. LEFT AGENTIC PROMPT & TASK MATRIX PANEL -->
+    <aside id="agent-panel" class="w-80 bg-playground-surface border-r border-playground-border flex flex-col shrink-0 transition-all duration-300 z-20">
+      
+      <!-- Panel Header -->
+      <div class="p-3 border-b border-playground-border flex items-center justify-between bg-playground-card/30">
+        <div class="flex items-center gap-2 font-bold text-xs text-zinc-200">
+          <i class="fa-solid fa-robot text-playground-accent"></i>
+          <span>Auto-Prompt Studio</span>
+        </div>
+        <span class="text-[10px] text-zinc-500 font-mono">Agent ID: #AC-9042</span>
+      </div>
+
+      <!-- Agent Strategy Selector & Sliders -->
+      <div class="p-3 border-b border-playground-border space-y-3 bg-playground-card/10 text-xs">
+        <div>
+          <label class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">Agentic Engine Strategy</label>
+          <select id="select-strategy" class="w-full bg-playground-bg border border-playground-border rounded-lg px-2.5 py-1.5 text-zinc-200 outline-none focus:border-playground-accent font-mono text-xs">
+            <option value="multi-agent">Multi-Agent Self-Correction Loop</option>
+            <option value="speed">Ultra-Fast Single Pass (Low Latency)</option>
+            <option value="strict">Strict Formally-Verified Synthesis</option>
+          </select>
+        </div>
+
+        <div class="space-y-1">
+          <div class="flex justify-between text-[11px] font-mono">
+            <span class="text-zinc-400">Sampling Temp</span>
+            <span id="temp-val" class="text-playground-accent font-bold">0.2</span>
+          </div>
+          <input type="range" min="0" max="1" step="0.05" value="0.2" oninput="document.getElementById('temp-val').innerText = this.value" class="w-full accent-cyan-400 h-1 bg-playground-bg rounded-lg cursor-pointer">
+        </div>
+      </div>
+
+      <!-- Autonomous Agent Task Stack -->
+      <div class="flex-1 overflow-y-auto p-3 space-y-3">
+        <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Agent Action Sequence</span>
+
+        <div id="task-stack" class="space-y-2 text-xs font-mono">
+          <div class="p-2.5 rounded-xl bg-playground-card border border-playground-border flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-circle-check text-emerald-400 text-xs"></i>
+              <span class="text-zinc-300">Parse Component Schema</span>
+            </div>
+            <span class="text-[10px] text-zinc-500">12ms</span>
+          </div>
+
+          <div class="p-2.5 rounded-xl bg-playground-card border border-playground-border flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-circle-check text-emerald-400 text-xs"></i>
+              <span class="text-zinc-300">Generate Tailwind UI Layout</span>
+            </div>
+            <span class="text-[10px] text-zinc-500">45ms</span>
+          </div>
+
+          <div id="active-task-step" class="p-2.5 rounded-xl bg-playground-card border border-playground-accent/50 glow-cyan flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-spinner text-playground-accent animate-spin text-xs"></i>
+              <span class="text-zinc-100 font-semibold">Synthesize State Logic</span>
+            </div>
+            <span class="text-[10px] text-playground-accent font-bold">Active</span>
+          </div>
+
+          <div class="p-2.5 rounded-xl bg-playground-card/40 border border-playground-border/60 flex items-center justify-between text-zinc-500">
+            <div class="flex items-center gap-2">
+              <i class="fa-regular fa-circle text-xs"></i>
+              <span>Verify & Linter Pass</span>
+            </div>
+            <span class="text-[10px]">Queued</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prompt Input Footer -->
+      <div class="p-3 border-t border-playground-border bg-playground-surface space-y-2">
+        <div class="relative bg-playground-bg border border-playground-border rounded-xl p-2 focus-within:border-playground-accent transition">
+          <textarea id="agent-prompt-input" rows="3" class="w-full bg-transparent text-xs text-zinc-100 outline-none resize-none font-sans placeholder-zinc-500" placeholder="Describe component or logic to auto-generate... (e.g. 'Build interactive real-time telemetry card with toggle logic')"></textarea>
+          
+          <div class="flex items-center justify-between pt-1 border-t border-playground-border/40 mt-1 text-xs">
+            <button onclick="injectPresetPrompt('telemetry')" class="text-[11px] text-playground-accent hover:underline flex items-center gap-1 font-mono">
+              <i class="fa-solid fa-lightbulb"></i> Preset Prompt
+            </button>
+            <button onclick="runAutoCodingLoop()" class="bg-playground-accent text-zinc-950 font-bold px-3 py-1 rounded-lg text-xs hover:opacity-90">
+              Run Loop
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 2. CENTER AUTO-CANVAS & METRICS DASHBOARD CONTAINER -->
+    <main class="flex-1 flex flex-col min-w-0 bg-playground-bg relative overflow-hidden">
+      
+      <!-- TOP EDITOR TABS & CANVAS SELECTOR -->
+      <div class="h-10 bg-playground-surface/80 border-b border-playground-border px-3 flex items-center justify-between shrink-0 font-mono text-xs select-none">
+        <div class="flex items-center gap-2 overflow-x-auto">
+          <button onclick="switchTab('component')" id="tab-btn-component" class="px-3 py-1.5 rounded-t-lg bg-playground-bg border-t-2 border-playground-accent text-zinc-100 font-semibold flex items-center gap-2">
+            <i class="fa-brands fa-html5 text-amber-500"></i>
+            <span>InteractiveCanvas.html</span>
+          </button>
+
+          <button onclick="switchTab('logic')" id="tab-btn-logic" class="px-3 py-1.5 rounded-t-lg bg-playground-card/40 hover:bg-playground-card text-zinc-400 flex items-center gap-2">
+            <i class="fa-brands fa-js text-yellow-400"></i>
+            <span>TelemetryEngine.js</span>
+          </button>
+
+          <button onclick="switchTab('styles')" id="tab-btn-styles" class="px-3 py-1.5 rounded-t-lg bg-playground-card/40 hover:bg-playground-card text-zinc-400 flex items-center gap-2">
+            <i class="fa-brands fa-css3-alt text-cyan-400"></i>
+            <span>MetricsTheme.css</span>
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2 text-zinc-400">
+          <button onclick="toggleSplitCanvas()" class="hover:text-zinc-100 px-2 py-1 rounded hover:bg-playground-hover" title="Toggle Split Editor/Preview"><i class="fa-solid fa-columns"></i></button>
+          <button onclick="refreshPreview()" class="hover:text-zinc-100 px-2 py-1 rounded hover:bg-playground-hover" title="Reload Live Web View"><i class="fa-solid fa-rotate"></i></button>
+        </div>
+      </div>
+
+      <!-- MAIN SPLIT WORKSPACE: EDITOR & LIVE AUTO PREVIEW -->
+      <div id="workspace-viewport" class="flex-1 flex flex-col lg:flex-row min-h-0 relative overflow-hidden">
+        
+        <!-- AUTO CODE EDITOR PANE -->
+        <div id="editor-pane" class="flex-1 flex flex-col border-r border-playground-border bg-playground-bg relative">
+          
+          <div class="h-8 bg-playground-card/40 border-b border-playground-border px-3 flex items-center justify-between text-xs font-mono text-zinc-400 shrink-0">
+            <span id="active-filename-display">InteractiveCanvas.html</span>
+            <div class="flex items-center gap-2 text-[11px]">
+              <span id="diff-status" class="text-emerald-400"><i class="fa-solid fa-check-circle"></i> Synthesized</span>
+              <button onclick="copyCode()" class="hover:text-white"><i class="fa-regular fa-copy"></i> Copy</button>
+            </div>
+          </div>
+
+          <!-- Line Numbers + Live Textarea -->
+          <div class="flex-1 flex font-mono text-xs md:text-sm overflow-hidden relative">
+            <div id="editor-lines" class="w-12 py-3 bg-playground-surface/40 border-r border-playground-border text-right pr-2 text-zinc-600 select-none leading-6 font-mono text-xs shrink-0">1</div>
+            <textarea id="code-editor" spellcheck="false" class="flex-1 bg-transparent p-3 text-zinc-200 outline-none resize-none leading-6 font-mono whitespace-pre border-none focus:ring-0 overflow-auto"></textarea>
+          </div>
+        </div>
+
+        <!-- LIVE COMPONENT RENDER CANVAS -->
+        <div id="preview-pane" class="flex-1 flex flex-col bg-playground-surface/30 relative">
+          <div class="h-8 bg-playground-card/60 border-b border-playground-border px-3 flex items-center justify-between text-xs font-mono shrink-0">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span class="text-zinc-300 font-bold">Autonomous Component Sandbox</span>
+              <span id="canvas-gui-badge" class="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-400 border border-purple-500/30">Desktop View</span>
+            </div>
+            <span class="text-[10px] text-zinc-500">DOM Hot-Reload Active</span>
+          </div>
+
+          <div class="flex-1 p-3 flex items-center justify-center overflow-hidden bg-zinc-950/80">
+            <div id="iframe-wrapper" class="w-full h-full transition-all duration-300 flex items-center justify-center">
+              <iframe id="live-canvas-iframe" class="w-full h-full rounded-xl border border-playground-border bg-white shadow-2xl transition-all duration-300"></iframe>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 3. REAL-TIME TELEMETRY & AUTO-CODING METRICS OVERLAY PANEL -->
+      <div id="metrics-dock" class="h-48 border-t border-playground-border bg-playground-surface flex flex-col shrink-0 transition-all duration-300">
+        
+        <!-- Dock Header -->
+        <div class="h-8 border-b border-playground-border px-4 flex items-center justify-between text-xs font-mono bg-playground-card/50 shrink-0">
+          <div class="flex items-center gap-3">
+            <span class="text-playground-accent font-bold flex items-center gap-1.5">
+              <i class="fa-solid fa-chart-simple"></i> REAL-TIME ENGINE METRICS
+            </span>
+            <span class="text-zinc-500">|</span>
+            <span class="text-zinc-400">Active Model: <strong id="active-model-display" class="text-cyan-400 font-bold">Ollama / codellama:13b (localhost:11434)</strong></span>
+            <button onclick="openLocalhostSettingsModal()" class="text-[10px] text-zinc-400 hover:text-playground-accent underline flex items-center gap-1">
+              <i class="fa-solid fa-gear"></i> Configure
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="toggleDockHeight()" class="text-zinc-400 hover:text-white p-1"><i class="fa-solid fa-chevron-up"></i></button>
+          </div>
+        </div>
+
+  <!-- ==================== LOCALHOST AI MODEL SETTINGS MODAL ==================== -->
+  <div id="localhost-modal" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-playground-surface border border-playground-border rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-playground-border flex items-center justify-between bg-playground-card/50">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
+            <i class="fa-solid fa-server text-sm"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-sm text-zinc-100">Localhost AI Models & Connection Settings</h3>
+            <p class="text-[11px] text-zinc-400 font-mono">Connect local runners (Ollama, llama.cpp, KoboldCpp, vLLM, LocalAI)</p>
+          </div>
+        </div>
+        <button onclick="closeLocalhostSettingsModal()" class="w-7 h-7 rounded-lg hover:bg-playground-hover text-zinc-400 hover:text-white flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 space-y-5 overflow-y-auto font-sans text-xs flex-1">
+        
+        <!-- Quick Select Local Engine Provider -->
+        <div>
+          <label class="block font-mono text-[11px] font-semibold text-zinc-300 uppercase tracking-wider mb-2">1. Select Backend Provider</label>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button onclick="selectProvider('ollama')" id="prov-ollama" class="p-3 rounded-xl border bg-playground-card border-playground-accent text-left hover:border-playground-accent transition group">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-bold text-zinc-100">Ollama</span>
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              </div>
+              <span class="text-[10px] text-zinc-400 font-mono">Port 11434</span>
+            </button>
+
+            <button onclick="selectProvider('llamacpp')" id="prov-llamacpp" class="p-3 rounded-xl border bg-playground-card/50 border-playground-border text-left hover:border-playground-accent transition group">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-bold text-zinc-300 group-hover:text-white">llama.cpp</span>
+                <span class="w-2 h-2 rounded-full bg-zinc-600"></span>
+              </div>
+              <span class="text-[10px] text-zinc-400 font-mono">Port 8080</span>
+            </button>
+
+            <button onclick="selectProvider('vllm')" id="prov-vllm" class="p-3 rounded-xl border bg-playground-card/50 border-playground-border text-left hover:border-playground-accent transition group">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-bold text-zinc-300 group-hover:text-white">vLLM / LocalAI</span>
+                <span class="w-2 h-2 rounded-full bg-zinc-600"></span>
+              </div>
+              <span class="text-[10px] text-zinc-400 font-mono">Port 8000</span>
+            </button>
+
+            <button onclick="selectProvider('custom')" id="prov-custom" class="p-3 rounded-xl border bg-playground-card/50 border-playground-border text-left hover:border-playground-accent transition group">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-bold text-zinc-300 group-hover:text-white">Custom Server</span>
+                <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+              </div>
+              <span class="text-[10px] text-zinc-400 font-mono">OpenAI Compatible</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Host URL & API Key Inputs -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono">
+          <div class="sm:col-span-2">
+            <label class="block text-[10px] font-semibold text-zinc-400 mb-1">Localhost Host / Base Endpoint</label>
+            <div class="relative">
+              <input id="input-endpoint" type="text" value="http://127.0.0.1:11434" class="w-full bg-playground-bg border border-playground-border rounded-xl px-3 py-2 text-zinc-100 text-xs focus:border-playground-accent outline-none">
+              <button onclick="testLocalhostConnection()" class="absolute right-1.5 top-1.5 px-2.5 py-1 bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 rounded-lg text-[10px] font-bold transition flex items-center gap-1">
+                <i class="fa-solid fa-plug"></i> Test Connection
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[10px] font-semibold text-zinc-400 mb-1">API Key (Optional)</label>
+            <input id="input-apikey" type="password" placeholder="bearer_token..." value="" class="w-full bg-playground-bg border border-playground-border rounded-xl px-3 py-2 text-zinc-100 text-xs focus:border-playground-accent outline-none">
+          </div>
+        </div>
+
+        <!-- Connection Status Indicator Box -->
+        <div id="connection-status-box" class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between font-mono">
+          <div class="flex items-center gap-2">
+            <i id="conn-icon" class="fa-solid fa-circle-check text-emerald-400"></i>
+            <span id="conn-status-text" class="text-emerald-300 font-bold">CONNECTED to Local Engine (Latency: 2ms)</span>
+          </div>
+          <button onclick="fetchAvailableModels()" class="text-[10px] text-cyan-400 hover:underline flex items-center gap-1">
+            <i class="fa-solid fa-arrows-rotate"></i> Refresh Model List
+          </button>
+        </div>
+
+        <!-- Model Picker & Parameters -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-mono text-[10px] font-semibold text-zinc-400 mb-1">Active Installed Local Model</label>
+            <select id="select-active-model" class="w-full bg-playground-bg border border-playground-border rounded-xl px-3 py-2 text-zinc-100 font-mono text-xs focus:border-playground-accent outline-none">
+              <option value="codellama:13b">codellama:13b (Installed)</option>
+              <option value="deepseek-coder:6.7b">deepseek-coder:6.7b (Installed)</option>
+              <option value="qwen2.5-coder:7b">qwen2.5-coder:7b (Installed)</option>
+              <option value="starcoder2:15b">starcoder2:15b (Installed)</option>
+              <option value="llama3:8b">llama3:8b (Installed)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-mono text-[10px] font-semibold text-zinc-400 mb-1">Context Window Size (Tokens)</label>
+            <select id="select-context-limit" class="w-full bg-playground-bg border border-playground-border rounded-xl px-3 py-2 text-zinc-100 font-mono text-xs focus:border-playground-accent outline-none">
+              <option value="8192">8k (8,192 Tokens - Fast)</option>
+              <option value="16384" selected>16k (16,384 Tokens - Balanced)</option>
+              <option value="32768">32k (32,768 Tokens - Large)</option>
+              <option value="65536">64k (65,536 Tokens - High Memory)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Advanced Execution Controls -->
+        <div class="p-3 bg-playground-card border border-playground-border rounded-xl space-y-2">
+          <span class="block text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Advanced Execution Toggles</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <label class="flex items-center gap-2 text-zinc-300 cursor-pointer">
+              <input id="chk-use-gpu" type="checkbox" checked class="rounded accent-cyan-400">
+              <span>Enable Metal / CUDA GPU Acceleration</span>
+            </label>
+            <label class="flex items-center gap-2 text-zinc-300 cursor-pointer">
+              <input id="chk-stream" type="checkbox" checked class="rounded accent-cyan-400">
+              <span>Stream Response Tokens in Real-time</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 border-t border-playground-border bg-playground-card/30 flex items-center justify-between font-mono">
+        <button onclick="pullNewModelPrompt()" class="text-cyan-400 hover:text-cyan-300 text-xs flex items-center gap-1.5">
+          <i class="fa-solid fa-download"></i> Pull New Model
+        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="closeLocalhostSettingsModal()" class="px-4 py-1.5 rounded-xl bg-playground-card hover:bg-playground-hover border border-playground-border text-zinc-300 text-xs transition">
+            Cancel
+          </button>
+          <button onclick="saveLocalhostSettings()" class="px-5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 text-zinc-950 font-bold text-xs shadow-lg glow-cyan hover:opacity-95 transition">
+            Save & Connect
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TOAST SYSTEM -->
+  <div id="playground-toast-container" class="fixed bottom-16 right-4 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- ==================== INTERACTIVE LOGIC ==================== -->
+  <script>
+    // Filesystem State
+    const files = {
+      'component': {
+        name: 'InteractiveCanvas.html',
+        content: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <script src="https://cdn.tailwindcss.com"><\/script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-6 flex flex-col items-center justify-center font-sans">
+  <div class="w-full max-w-sm p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl space-y-4">
+    <div class="flex items-center justify-between">
+      <span class="text-xs font-mono text-cyan-400 font-bold uppercase tracking-wider">Telemetry Card</span>
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+    </div>
+    
+    <div>
+      <h2 class="text-xl font-extrabold text-white">System Health</h2>
+      <p class="text-slate-400 text-xs">Autonomous Agent Workload Node #01</p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2 text-center font-mono">
+      <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+        <div class="text-xs text-slate-500">CPU Usage</div>
+        <div id="val-cpu" class="text-lg font-bold text-cyan-400">14%</div>
+      </div>
+      <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+        <div class="text-xs text-slate-500">FPS Rate</div>
+        <div id="val-fps" class="text-lg font-bold text-emerald-400">60</div>
+      </div>
+    </div>
+
+    <button onclick="triggerSimulate()" class="w-full py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs transition">
+      Pulse Load Simulation
+    </button>
+  </div>
+
+  <script>
+    function triggerSimulate() {
+      const cpu = Math.floor(20 + Math.random() * 65);
+      document.getElementById('val-cpu').innerText = cpu + '%';
+    }
+  <\/script>
+</body>
+</html>`
+      },
+      'logic': {
+        name: 'TelemetryEngine.js',
+        content: `// Auto Coding Playground Runtime Logic Engine
+class AgentTelemetryEngine {
+  constructor() {
+    this.status = "ONLINE";
+    this.tps = 142.8;
+  }
+
+  calculateOptimalTokenStream() {
+    return (Math.random() * 20 + 130).toFixed(1);
+  }
+}
+
+const engine = new AgentTelemetryEngine();
+console.log("Telemetry Engine Online:", engine.status);`
+      },
+      'styles': {
+        name: 'MetricsTheme.css',
+        content: `/* Auto Coding Playground Style Theme */
+:root {
+  --accent-color: #00f2ff;
+  --bg-color: #08090d;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: #f4f4f5;
+}`
+      }
+    };
+
+    let activeTab = 'component';
+
+    const editor = document.getElementById('code-editor');
+    const editorLines = document.getElementById('editor-lines');
+    const liveIframe = document.getElementById('live-canvas-iframe');
+
+    window.onload = function() {
+      loadTabContent();
+      refreshPreview();
+      startMetricsLoop();
+    };
+
+    function loadTabContent() {
+      editor.value = files[activeTab].content;
+      document.getElementById('active-filename-display').innerText = files[activeTab].name;
+      updateLineCounters();
+    }
+
+    function updateLineCounters() {
+      const lines = editor.value.split('\n').length;
+      let html = '';
+      for (let i = 1; i <= lines; i++) html += `${i}<br>`;
+      editorLines.innerHTML = html;
+    }
+
+    editor.addEventListener('input', () => {
+      files[activeTab].content = editor.value;
+      updateLineCounters();
+      if (activeTab === 'component') refreshPreview();
+    });
+
+    function switchTab(tabKey) {
+      activeTab = tabKey;
+      ['component', 'logic', 'styles'].forEach(k => {
+        const btn = document.getElementById(`tab-btn-${k}`);
+        if (k === tabKey) {
+          btn.className = "px-3 py-1.5 rounded-t-lg bg-playground-bg border-t-2 border-playground-accent text-zinc-100 font-semibold flex items-center gap-2";
+        } else {
+          btn.className = "px-3 py-1.5 rounded-t-lg bg-playground-card/40 hover:bg-playground-card text-zinc-400 flex items-center gap-2";
+        }
+      });
+      loadTabContent();
+    }
+
+    function refreshPreview() {
+      const doc = liveIframe.contentWindow.document;
+      doc.open();
+      doc.write(files['component'].content);
+      doc.close();
+    }
+
+    function runAutoCodingLoop() {
+      const tag = document.getElementById('agent-status-tag');
+      const taskStep = document.getElementById('active-task-step');
+      
+      tag.innerText = "SYNTHESIZING CODE...";
+      tag.className = "text-playground-accent font-bold animate-pulse";
+
+      showToast("Auto-coding agent loop initiated...", "info");
+
+      setTimeout(() => {
+        files['component'].content = files['component'].content.replace('System Health', 'Autonomous Agent Node (Updated)');
+        if (activeTab === 'component') editor.value = files['component'].content;
+        refreshPreview();
+
+        tag.innerText = "AUTONOMOUS IDLE";
+        tag.className = "text-emerald-400 font-bold";
+        showToast("Code generation & synthesis complete!", "success");
+      }, 1500);
+    }
+
+    function startMetricsLoop() {
+      setInterval(() => {
+        const tps = (135 + Math.random() * 20).toFixed(1);
+        const elTps = document.getElementById('metric-tps');
+        if (elTps) elTps.innerText = tps;
+
+        const elTtft = document.getElementById('metric-ttft');
+        if (elTtft) elTtft.innerText = `${Math.floor(14 + Math.random() * 8)}ms`;
+      }, 2500);
+    }
+
+    function injectPresetPrompt(type) {
+      document.getElementById('agent-prompt-input').value = "Generate real-time animated telemetry status grid with custom gradient glow cards.";
+      showToast("Preset prompt loaded into Agent Studio");
+    }
+
+    function copyCode() {
+      navigator.clipboard.writeText(editor.value);
+      showToast("Code snippet copied!");
+    }
+
+    // Explicit global function declarations to ensure inline HTML onclick handlers resolve correctly
+    window.toggleSplitCanvas = function() {
+      const editorPane = document.getElementById('editor-pane');
+      const previewPane = document.getElementById('preview-pane');
+      
+      if (editorPane.classList.contains('hidden')) {
+        // Show both
+        editorPane.classList.remove('hidden');
+        previewPane.classList.remove('hidden');
+        showToast("Split view enabled", "info");
+      } else if (previewPane.classList.contains('hidden')) {
+        // Show both
+        editorPane.classList.remove('hidden');
+        previewPane.classList.remove('hidden');
+        showToast("Split view enabled", "info");
+      } else {
+        // Toggle hiding preview to maximize editor
+        previewPane.classList.add('hidden');
+        showToast("Editor maximized", "info");
+      }
+    };
+
+    window.toggleMetricsOverlay = function() {
+      const dock = document.getElementById('metrics-dock');
+      dock.classList.toggle('h-48');
+      dock.classList.toggle('h-8');
+    };
+
+    window.toggleDockHeight = function() {
+      toggleMetricsOverlay();
+    };
+
+    function showToast(msg, type = "info") {
+      const container = document.getElementById('playground-toast-container');
+      const toast = document.createElement('div');
+      toast.className = "p-3 rounded-xl bg-playground-card border border-playground-accent/40 text-xs text-zinc-200 shadow-2xl flex items-center gap-2 font-mono pointer-events-auto transition duration-300";
+      toast.innerHTML = `<i class="fa-solid fa-circle-info text-playground-accent"></i> <span>${msg}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    }
+
+    /* SMART MENU FEATURE IMPLEMENTATION */
+    function createNewFile() {
+      const fileName = prompt("Enter new file name:", "Component.jsx");
+      if (fileName) {
+        showToast(`Created new workspace canvas: ${fileName}`, "success");
+      }
+    }
+
+    /* LOCALHOST AI MODAL CONTROLS & HANDLERS */
+    function openLocalhostSettingsModal() {
+      document.getElementById('localhost-modal').classList.remove('hidden');
+    }
+
+    function closeLocalhostSettingsModal() {
+      document.getElementById('localhost-modal').classList.add('hidden');
+    }
+
+    function selectProvider(prov) {
+      const providers = ['ollama', 'llamacpp', 'vllm', 'custom'];
+      providers.forEach(p => {
+        const el = document.getElementById(`prov-${p}`);
+        if (p === prov) {
+          el.className = "p-3 rounded-xl border bg-playground-card border-playground-accent text-left transition group";
+        } else {
+          el.className = "p-3 rounded-xl border bg-playground-card/50 border-playground-border text-left hover:border-playground-accent transition group";
+        }
+      });
+
+      const inputEnd = document.getElementById('input-endpoint');
+      if (prov === 'ollama') inputEnd.value = "http://127.0.0.1:11434";
+      if (prov === 'llamacpp') inputEnd.value = "http://127.0.0.1:8080";
+      if (prov === 'vllm') inputEnd.value = "http://127.0.0.1:8000";
+      if (prov === 'custom') inputEnd.value = "http://localhost:5000/v1";
+    }
+
+    function testLocalhostConnection() {
+      const statusBox = document.getElementById('connection-status-box');
+      const icon = document.getElementById('conn-icon');
+      const text = document.getElementById('conn-status-text');
+
+      statusBox.className = "p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-between font-mono";
+      icon.className = "fa-solid fa-spinner animate-spin text-cyan-400";
+      text.innerText = "Probing localhost connection...";
+
+      setTimeout(() => {
+        statusBox.className = "p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between font-mono";
+        icon.className = "fa-solid fa-circle-check text-emerald-400";
+        text.innerText = "CONNECTED to Localhost Engine (Latency: 1.8ms)";
+        showToast("Localhost API server is online!", "success");
+      }, 800);
+    }
+
+    function fetchAvailableModels() {
+      showToast("Refreshed active model list from localhost registry");
+    }
+
+    function pullNewModelPrompt() {
+      const modelTag = prompt("Enter model tag to pull (e.g., 'deepseek-coder:14b'):", "deepseek-coder:14b");
+      if (modelTag) {
+        showToast(`Initiated pull for '${modelTag}'... Check terminal console`, "info");
+      }
+    }
+
+    function saveLocalhostSettings() {
+      const selectedModel = document.getElementById('select-active-model').value;
+      const endpoint = document.getElementById('input-endpoint').value;
+      
+      document.getElementById('active-model-display').innerText = `${selectedModel} (${endpoint.replace('http://', '')})`;
+      closeLocalhostSettingsModal();
+      showToast(`Connected to local model: ${selectedModel}`, "success");
+    }
+
+    function saveSnapshot() {
+      showToast("Workspace snapshot saved to state database!", "success");
+    }
+
+    function exportWorkspace() {
+      showToast("Exporting full project archive...", "info");
+    }
+
+    function runSmartAction(actionType) {
+      const actions = {
+        'refactor': 'Executing Agentic Refactoring Pass...',
+        'tests': 'Synthesizing automated test suite...',
+        'security': 'Running AST Static Vulnerability Scan...',
+        'docs': 'Generating automated JSDoc comments...'
+      };
+      showToast(actions[actionType] || "Executing Smart Action", "info");
+    }
+
+    /* GUI VIEWPORT MODE SWITCHER */
+    let currentGuiMode = 'desktop';
+
+    function setGuiMode(mode) {
+      currentGuiMode = mode;
+      const iframeWrapper = document.getElementById('iframe-wrapper');
+      const liveIframe = document.getElementById('live-canvas-iframe');
+      const badge = document.getElementById('canvas-gui-badge');
+      const btnDesktop = document.getElementById('gui-mode-desktop');
+      const btnMobile = document.getElementById('gui-mode-mobile');
+
+      if (mode === 'mobile') {
+        iframeWrapper.className = "w-full h-full transition-all duration-300 flex items-center justify-center p-4";
+        liveIframe.style.width = "375px";
+        liveIframe.style.height = "667px";
+        liveIframe.style.maxHeight = "100%";
+        liveIframe.classList.add("border-4", "border-zinc-700", "rounded-[32px]");
+
+        badge.innerText = "Mobile View (375x667)";
+        badge.className = "text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30";
+
+        btnMobile.className = "px-2.5 py-1 rounded-md bg-playground-accent/20 text-playground-accent font-semibold flex items-center gap-1.5 transition";
+        btnDesktop.className = "px-2.5 py-1 rounded-md text-zinc-400 hover:text-white flex items-center gap-1.5 transition";
+        
+        showToast("Switched preview to Mobile GUI", "info");
+      } else {
+        iframeWrapper.className = "w-full h-full transition-all duration-300 flex items-center justify-center";
+        liveIframe.style.width = "100%";
+        liveIframe.style.height = "100%";
+        liveIframe.style.maxHeight = "none";
+        liveIframe.classList.remove("border-4", "border-zinc-700", "rounded-[32px]");
+
+        badge.innerText = "Desktop View";
+        badge.className = "text-[10px] px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-400 border border-purple-500/30";
+
+        btnDesktop.className = "px-2.5 py-1 rounded-md bg-playground-accent/20 text-playground-accent font-semibold flex items-center gap-1.5 transition";
+        btnMobile.className = "px-2.5 py-1 rounded-md text-zinc-400 hover:text-white flex items-center gap-1.5 transition";
+
+        showToast("Switched preview to Desktop GUI", "info");
+      }
+    }
+  </script>
+</body>
+</html>

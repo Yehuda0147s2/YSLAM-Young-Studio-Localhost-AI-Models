@@ -1,0 +1,6 @@
+{
+  "name": "YSLAM",
+  "description": "Young Studio Localhost AI Models (YSLAM) v3.5: local LLM studio, code playground & telemetry",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
