@@ -145,6 +145,41 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
         }
       }
 
+  // Multiple Permissions Launcher (Quick Grant All)
+  private val multiplePermissionsLauncher =
+      registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results ->
+        var grantedCount = 0
+        results.forEach { (_, granted) ->
+          if (granted) grantedCount++
+        }
+        val total = results.size
+        Toast.makeText(
+            this,
+            "Granted $grantedCount of $total requested permissions",
+            Toast.LENGTH_SHORT
+        ).show()
+        webView?.post {
+          webView?.evaluateJavascript(
+              "if (window.refreshPermissionsUi) window.refreshPermissionsUi(); window.showToast('Permissions updated ($grantedCount/$total granted)', 'info');",
+              null)
+        }
+
+        // If MANAGE_EXTERNAL_STORAGE is not granted on Android 11+, prompt user for special settings
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
+          webView?.postDelayed({
+            try {
+              val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                data = Uri.parse("package:$packageName")
+              }
+              storagePermissionLauncher.launch(intent)
+            } catch (_: Exception) {
+              val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+              storagePermissionLauncher.launch(intent)
+            }
+          }, 1200)
+        }
+      }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     sanitizeWebViewVariationsSeed()
@@ -907,6 +942,78 @@ class MainActivity : ComponentActivity(), SensorEventListener, TextToSpeech.OnIn
           }
           else -> {
             Toast.makeText(this@MainActivity, "Permission $permId is managed by system", Toast.LENGTH_SHORT).show()
+          }
+        }
+      }
+    }
+
+    @JavascriptInterface
+    fun quickGrantAllPermissions() {
+      runOnUiThread {
+        val permissionsToRequest = mutableListOf<String>()
+
+        // 1. Microphone / Audio Recording
+        if (ContextCompat.checkSelfPermission(
+                this@MainActivity,
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+          permissionsToRequest.add(Manifest.permission.RECORD_AUDIO)
+        }
+
+        // 2. Notifications (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+          if (ContextCompat.checkSelfPermission(
+                  this@MainActivity,
+                  Manifest.permission.POST_NOTIFICATIONS
+              ) != PackageManager.PERMISSION_GRANTED
+          ) {
+            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+          }
+        }
+
+        // 3. Legacy Storage Read (Android 10-12)
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
+          if (ContextCompat.checkSelfPermission(
+                  this@MainActivity,
+                  Manifest.permission.READ_EXTERNAL_STORAGE
+              ) != PackageManager.PERMISSION_GRANTED
+          ) {
+            permissionsToRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+          }
+        }
+
+        // 4. Legacy Storage Write (Android 9-10)
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+          if (ContextCompat.checkSelfPermission(
+                  this@MainActivity,
+                  Manifest.permission.WRITE_EXTERNAL_STORAGE
+              ) != PackageManager.PERMISSION_GRANTED
+          ) {
+            permissionsToRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+          }
+        }
+
+        if (permissionsToRequest.isNotEmpty()) {
+          multiplePermissionsLauncher.launch(permissionsToRequest.toTypedArray())
+        } else {
+          // If all runtime dangerous permissions are already granted, check special storage permission
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
+            Toast.makeText(this@MainActivity, "Runtime permissions granted. Opening Filesystem settings...", Toast.LENGTH_SHORT).show()
+            try {
+              val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                data = Uri.parse("package:$packageName")
+              }
+              storagePermissionLauncher.launch(intent)
+            } catch (_: Exception) {
+              val intent = Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
+              storagePermissionLauncher.launch(intent)
+            }
+          } else {
+            Toast.makeText(this@MainActivity, "All standard runtime permissions are already granted!", Toast.LENGTH_SHORT).show()
+            webView?.post {
+              webView?.evaluateJavascript("if (window.refreshPermissionsUi) window.refreshPermissionsUi();", null)
+            }
           }
         }
       }
